@@ -50,20 +50,49 @@ class Game {
     }
 
     /**
+     * 停止游戏
+     */
+    stop() {
+        this.gameOver = true;
+        this.cleanup();
+        cancelAnimationFrame(this.animationFrame);
+    }
+
+    /**
      * 清理事件监听器
      */
     cleanup() {
         window.removeEventListener('resize', this.resizeHandler);
-        this.canvas.removeEventListener('touchstart', this.touchStartHandler);
-        this.canvas.removeEventListener('touchmove', this.touchMoveHandler);
-        this.canvas.removeEventListener('touchend', this.touchEndHandler);
         window.removeEventListener('keydown', this.keydownHandler);
+        
+        if (this.canvas) {
+            this.canvas.removeEventListener('touchstart', this.touchStartHandler);
+            this.canvas.removeEventListener('touchmove', this.touchMoveHandler);
+            this.canvas.removeEventListener('touchend', this.touchEndHandler);
+        }
+        
+        const restartButton = document.querySelector('.game-over button');
+        if (restartButton) {
+            restartButton.removeEventListener('click', this.restartHandler);
+            restartButton.removeEventListener('touchend', this.restartHandler);
+        }
     }
 
     /**
      * 设置事件监听器
      */
     setupEventListeners() {
+        // 重启事件处理器
+        this.restartHandler = (e) => {
+            e.preventDefault();
+            restartGame();
+        };
+
+        // 重启按钮事件
+        const restartButton = document.querySelector('.game-over button');
+        restartButton.addEventListener('click', this.restartHandler);
+        restartButton.addEventListener('touchend', this.restartHandler);
+
         // 键盘事件
         this.keydownHandler = (e) => {
             if (e.key === 'ArrowLeft') {
@@ -124,13 +153,6 @@ class Game {
         // 禁用双击缩放
         document.addEventListener('dblclick', (e) => {
             e.preventDefault();
-        }, { passive: false });
-
-        // 重启按钮的触摸事件
-        const restartButton = document.querySelector('.game-over button');
-        restartButton.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            restartGame();
         }, { passive: false });
     }
 
@@ -239,7 +261,7 @@ class Game {
     gameLoop() {
         this.update();
         this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+        this.animationFrame = requestAnimationFrame(() => this.gameLoop());
     }
 }
 
@@ -432,14 +454,25 @@ class Bomb {
  * 重新开始游戏
  */
 function restartGame() {
-    const gameOverElement = document.getElementById('gameOver');
-    gameOverElement.style.display = 'none';
-    
-    // 确保移除所有事件监听器
     if (game) {
-        game.cleanup();
+        game.stop();
     }
-    game = new Game();
+    
+    const gameOverElement = document.getElementById('gameOver');
+    if (gameOverElement) {
+        gameOverElement.style.display = 'none';
+    }
+    
+    // 重置分数显示
+    const scoreElement = document.getElementById('scoreValue');
+    if (scoreElement) {
+        scoreElement.textContent = '0';
+    }
+    
+    // 创建新游戏实例
+    setTimeout(() => {
+        game = new Game();
+    }, 100);
 }
 
 // 启动游戏
