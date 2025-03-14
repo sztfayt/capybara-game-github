@@ -8,7 +8,8 @@ class Game {
         
         // 设置画布大小
         this.resizeCanvas();
-        window.addEventListener('resize', () => this.resizeCanvas());
+        this.resizeHandler = () => this.resizeCanvas();
+        window.addEventListener('resize', this.resizeHandler);
         
         this.score = 0;
         this.gameOver = false;
@@ -49,11 +50,22 @@ class Game {
     }
 
     /**
+     * 清理事件监听器
+     */
+    cleanup() {
+        window.removeEventListener('resize', this.resizeHandler);
+        this.canvas.removeEventListener('touchstart', this.touchStartHandler);
+        this.canvas.removeEventListener('touchmove', this.touchMoveHandler);
+        this.canvas.removeEventListener('touchend', this.touchEndHandler);
+        window.removeEventListener('keydown', this.keydownHandler);
+    }
+
+    /**
      * 设置事件监听器
      */
     setupEventListeners() {
         // 键盘事件
-        window.addEventListener('keydown', (e) => {
+        this.keydownHandler = (e) => {
             if (e.key === 'ArrowLeft') {
                 this.capybara.moveLeft(this.canvas.width);
             } else if (e.key === 'ArrowRight') {
@@ -61,19 +73,20 @@ class Game {
             } else if (e.key === ' ') {
                 this.shoot();
             }
-        });
+        };
+        window.addEventListener('keydown', this.keydownHandler);
 
         // 触摸事件
-        this.canvas.addEventListener('touchstart', (e) => {
+        this.touchStartHandler = (e) => {
             e.preventDefault();
             this.isTouching = true;
             this.touchStartX = e.touches[0].clientX;
             this.lastTouchX = this.touchStartX;
             this.touchStartTime = Date.now();
             this.shoot();
-        }, { passive: false });
+        };
 
-        this.canvas.addEventListener('touchmove', (e) => {
+        this.touchMoveHandler = (e) => {
             e.preventDefault();
             if (!this.isTouching) return;
             
@@ -97,16 +110,27 @@ class Game {
                 this.shoot();
                 this.lastShootTime = now;
             }
-        }, { passive: false });
+        };
 
-        this.canvas.addEventListener('touchend', (e) => {
+        this.touchEndHandler = (e) => {
             e.preventDefault();
             this.isTouching = false;
-        }, { passive: false });
+        };
+
+        this.canvas.addEventListener('touchstart', this.touchStartHandler, { passive: false });
+        this.canvas.addEventListener('touchmove', this.touchMoveHandler, { passive: false });
+        this.canvas.addEventListener('touchend', this.touchEndHandler, { passive: false });
 
         // 禁用双击缩放
         document.addEventListener('dblclick', (e) => {
             e.preventDefault();
+        }, { passive: false });
+
+        // 重启按钮的触摸事件
+        const restartButton = document.querySelector('.game-over button');
+        restartButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            restartGame();
         }, { passive: false });
     }
 
@@ -408,7 +432,13 @@ class Bomb {
  * 重新开始游戏
  */
 function restartGame() {
-    document.getElementById('gameOver').style.display = 'none';
+    const gameOverElement = document.getElementById('gameOver');
+    gameOverElement.style.display = 'none';
+    
+    // 确保移除所有事件监听器
+    if (game) {
+        game.cleanup();
+    }
     game = new Game();
 }
 
